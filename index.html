@@ -6,199 +6,696 @@
     <title>Seed Buy Bot</title>
     <script src="https://telegram.org/js/telegram-web-app.js"></script>
     <style>
-        /* --- ОБЩИЕ СТИЛИ --- */
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+        *, *::before, *::after {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        :root {
+            --primary: #6C5CE7;
+            --primary-dark: #5A4BD1;
+            --accent: #00CEFF;
+            --accent2: #A29BFE;
+            --bg-dark: #0a0a1a;
+            --bg-card: rgba(255,255,255,0.04);
+            --glass: rgba(255,255,255,0.06);
+            --glass-border: rgba(255,255,255,0.1);
+            --text: #ffffff;
+            --text-muted: rgba(255,255,255,0.55);
+            --success: #00E676;
+        }
+
         body {
             margin: 0;
             padding: 0;
-            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
             height: 100vh;
             width: 100vw;
-            overflow: hidden; /* Чтобы не скроллилось */
+            overflow: hidden;
             display: flex;
             justify-content: center;
             align-items: center;
+            background: var(--bg-dark);
+            color: var(--text);
+            -webkit-font-smoothing: antialiased;
         }
 
-        /* Стиль для экранов с фоном (Экран 1 и 2) */
-        .bg-image {
-            background: url('fon.png') no-repeat center center;
-            background-size: cover;
-            color: white;
-            text-align: center;
+        /* ===== ANIMATED BACKGROUND ===== */
+        .bg-canvas {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            overflow: hidden;
+            pointer-events: none;
         }
 
-        /* Стиль для белых экранов (Экран 3 и 4) */
-        .bg-white {
-            background-color: #ffffff;
-            color: #000000;
-            text-align: center;
+        .bg-orb {
+            position: absolute;
+            border-radius: 50%;
+            filter: blur(80px);
+            opacity: 0.35;
+            animation: orbFloat 12s ease-in-out infinite;
         }
 
-        /* Общий контейнер для каждого экрана */
+        .bg-orb--1 {
+            width: 350px;
+            height: 350px;
+            background: var(--primary);
+            top: -10%;
+            left: -10%;
+            animation-duration: 14s;
+        }
+
+        .bg-orb--2 {
+            width: 280px;
+            height: 280px;
+            background: var(--accent);
+            bottom: -5%;
+            right: -10%;
+            animation-duration: 18s;
+            animation-delay: -4s;
+        }
+
+        .bg-orb--3 {
+            width: 200px;
+            height: 200px;
+            background: var(--accent2);
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            animation-duration: 10s;
+            animation-delay: -2s;
+            opacity: 0.2;
+        }
+
+        @keyframes orbFloat {
+            0%, 100% { transform: translate(0, 0) scale(1); }
+            25% { transform: translate(30px, -40px) scale(1.1); }
+            50% { transform: translate(-20px, 20px) scale(0.95); }
+            75% { transform: translate(40px, 30px) scale(1.05); }
+        }
+
+        /* Grid pattern overlay */
+        .bg-grid {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            background-image:
+                linear-gradient(rgba(255,255,255,0.02) 1px, transparent 1px),
+                linear-gradient(90deg, rgba(255,255,255,0.02) 1px, transparent 1px);
+            background-size: 60px 60px;
+            mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+            -webkit-mask-image: radial-gradient(ellipse at center, black 30%, transparent 70%);
+        }
+
+        /* Floating particles */
+        .particles {
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            overflow: hidden;
+        }
+
+        .particle {
+            position: absolute;
+            width: 3px;
+            height: 3px;
+            background: var(--accent);
+            border-radius: 50%;
+            opacity: 0;
+            animation: particleRise linear infinite;
+        }
+
+        @keyframes particleRise {
+            0% { opacity: 0; transform: translateY(100vh) scale(0); }
+            10% { opacity: 0.6; }
+            90% { opacity: 0.3; }
+            100% { opacity: 0; transform: translateY(-10vh) scale(1); }
+        }
+
+        /* ===== SCREENS ===== */
         .screen {
-            display: none; /* Скрываем все экраны по умолчанию */
+            display: none;
             flex-direction: column;
             align-items: center;
             justify-content: center;
             width: 100%;
             height: 100%;
-            padding: 20px;
+            padding: 24px;
             box-sizing: border-box;
-            animation: fadeIn 0.3s ease-in-out;
+            position: relative;
+            z-index: 1;
         }
 
-        /* Показываем первый экран сразу */
         #screen-1 { display: flex; }
 
-        /* Анимация появления */
-        @keyframes fadeIn {
-            from { opacity: 0; transform: translateY(10px); }
-            to { opacity: 1; transform: translateY(0); }
+        /* Screen transition animations */
+        .screen.screen--enter {
+            animation: screenSlideIn 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards;
         }
 
-        /* --- ТИПОГРАФИКА --- */
-        h1 {
-            font-size: 32px;
-            font-weight: 700;
-            margin-bottom: 10px;
-            text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Тень чтобы читалось на любом фоне */
+        @keyframes screenSlideIn {
+            from {
+                opacity: 0;
+                transform: translateY(40px) scale(0.97);
+                filter: blur(8px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+                filter: blur(0);
+            }
         }
-        
-        h2 {
-            font-size: 18px;
+
+        /* Stagger children animation */
+        .screen.screen--enter > * {
+            opacity: 0;
+            animation: staggerIn 0.5s cubic-bezier(0.16, 1, 0.3, 1) forwards;
+        }
+
+        .screen.screen--enter > *:nth-child(1) { animation-delay: 0.1s; }
+        .screen.screen--enter > *:nth-child(2) { animation-delay: 0.2s; }
+        .screen.screen--enter > *:nth-child(3) { animation-delay: 0.3s; }
+        .screen.screen--enter > *:nth-child(4) { animation-delay: 0.4s; }
+        .screen.screen--enter > *:nth-child(5) { animation-delay: 0.5s; }
+
+        @keyframes staggerIn {
+            from {
+                opacity: 0;
+                transform: translateY(20px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        /* ===== SCREEN 1 — HERO ===== */
+
+        .hero-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 6px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            border-radius: 100px;
+            padding: 8px 18px;
+            font-size: 12px;
             font-weight: 500;
-            margin-bottom: 30px;
-            opacity: 0.9;
+            color: var(--accent);
+            letter-spacing: 1.5px;
+            text-transform: uppercase;
+            margin-bottom: 24px;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
         }
 
-        p { font-size: 16px; margin: 10px 0; }
-        
-        .price-text {
-            font-size: 20px;
-            font-weight: 700; /* Жирнее */
-            margin-top: 20px;
-            margin-bottom: 20px;
-            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        .hero-badge .dot {
+            width: 6px;
+            height: 6px;
+            background: var(--success);
+            border-radius: 50%;
+            animation: dotPulse 2s ease-in-out infinite;
         }
 
-        /* --- ЭЛЕМЕНТЫ УПРАВЛЕНИЯ --- */
-        
-        /* Основная синяя кнопка */
+        @keyframes dotPulse {
+            0%, 100% { opacity: 1; box-shadow: 0 0 0 0 rgba(0,230,118,0.4); }
+            50% { opacity: 0.7; box-shadow: 0 0 0 6px rgba(0,230,118,0); }
+        }
+
+        h1 {
+            font-size: 42px;
+            font-weight: 900;
+            margin-bottom: 8px;
+            text-shadow: none;
+            letter-spacing: -1.5px;
+            line-height: 1.1;
+            background: linear-gradient(135deg, #fff 0%, var(--accent2) 50%, var(--accent) 100%);
+            background-size: 200% 200%;
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+            animation: gradientShift 4s ease-in-out infinite;
+        }
+
+        @keyframes gradientShift {
+            0%, 100% { background-position: 0% 50%; }
+            50% { background-position: 100% 50%; }
+        }
+
+        h2 {
+            font-size: 15px;
+            font-weight: 400;
+            margin-bottom: 40px;
+            opacity: 1;
+            color: var(--text-muted);
+            line-height: 1.6;
+            max-width: 300px;
+        }
+
+        /* ===== BUTTONS ===== */
+
         .btn-blue {
-            background-color: #0044cc; /* Темно-синий */
+            position: relative;
+            background: linear-gradient(135deg, var(--primary) 0%, #7C4DFF 100%);
             color: white;
             border: none;
             padding: 18px 50px;
-            font-size: 18px;
-            font-weight: bold;
-            border-radius: 12px;
-            cursor: pointer;
-            width: 80%;
-            max-width: 300px;
-            box-shadow: 0 4px 15px rgba(0, 68, 204, 0.4);
-            transition: transform 0.1s, background-color 0.2s;
-        }
-        .btn-blue:active { transform: scale(0.96); background-color: #003399; }
-
-        /* Выпадающий список (Select) */
-        select {
-            padding: 15px;
-            font-size: 18px;
-            border-radius: 10px;
-            border: 2px solid white;
-            background: rgba(255, 255, 255, 0.2);
-            color: white;
-            width: 80%;
-            max-width: 300px;
-            outline: none;
-            backdrop-filter: blur(5px);
-        }
-        select option {
-            background-color: #333;
-            color: white;
-        }
-
-        /* Кнопки оплаты (белый фон) */
-        .pay-btn {
-            background: linear-gradient(145deg, #f0f0f0, #ffffff);
-            border: 1px solid #ddd;
-            padding: 15px;
-            width: 80%;
-            margin: 8px 0;
-            border-radius: 12px;
             font-size: 16px;
-            font-weight: 600;
-            color: #333;
+            font-weight: 700;
+            border-radius: 16px;
             cursor: pointer;
-            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
-            transition: transform 0.1s;
+            width: 85%;
+            max-width: 320px;
+            letter-spacing: 1px;
+            text-transform: uppercase;
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            overflow: hidden;
+            box-shadow:
+                0 4px 24px rgba(108, 92, 231, 0.35),
+                0 0 0 0 rgba(108, 92, 231, 0);
+            font-family: 'Inter', sans-serif;
         }
-        .pay-btn:active { transform: scale(0.98); background: #e0e0e0; }
 
-        /* --- ЭКРАН УСПЕХА --- */
+        .btn-blue::before {
+            content: '';
+            position: absolute;
+            inset: 0;
+            background: linear-gradient(135deg, rgba(255,255,255,0.15) 0%, transparent 50%);
+            border-radius: inherit;
+        }
+
+        .btn-blue::after {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            background: rgba(255,255,255,0.15);
+            border-radius: 50%;
+            transform: translate(-50%, -50%);
+            transition: width 0.6s ease, height 0.6s ease;
+        }
+
+        .btn-blue:active {
+            transform: scale(0.96);
+            box-shadow:
+                0 2px 12px rgba(108, 92, 231, 0.3),
+                0 0 0 0 rgba(108, 92, 231, 0);
+        }
+
+        .btn-blue:active::after {
+            width: 400px;
+            height: 400px;
+        }
+
+        /* Button shimmer */
+        .btn-blue .btn-shimmer {
+            position: absolute;
+            top: 0;
+            left: -100%;
+            width: 60%;
+            height: 100%;
+            background: linear-gradient(90deg, transparent, rgba(255,255,255,0.15), transparent);
+            animation: shimmer 3s ease-in-out infinite;
+            pointer-events: none;
+        }
+
+        @keyframes shimmer {
+            0%, 100% { left: -100%; }
+            50% { left: 150%; }
+        }
+
+        /* ===== SELECT ===== */
+
+        .select-wrapper {
+            position: relative;
+            width: 85%;
+            max-width: 320px;
+        }
+
+        select {
+            padding: 18px 20px;
+            font-size: 16px;
+            font-weight: 500;
+            border-radius: 16px;
+            border: 1px solid var(--glass-border);
+            background: var(--glass);
+            color: white;
+            width: 100%;
+            outline: none;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            appearance: none;
+            -webkit-appearance: none;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            font-family: 'Inter', sans-serif;
+        }
+
+        select:focus {
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(108, 92, 231, 0.2);
+        }
+
+        select option {
+            background-color: #1a1a2e;
+            color: white;
+            padding: 10px;
+        }
+
+        .select-wrapper::after {
+            content: '';
+            position: absolute;
+            right: 18px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 0;
+            height: 0;
+            border-left: 5px solid transparent;
+            border-right: 5px solid transparent;
+            border-top: 6px solid var(--text-muted);
+            pointer-events: none;
+        }
+
+        /* ===== PRICE ===== */
+
+        .price-text {
+            font-size: 20px;
+            font-weight: 700;
+            margin-top: 24px;
+            margin-bottom: 28px;
+            text-shadow: none;
+            color: var(--text);
+            position: relative;
+        }
+
+        .price-text .price-amount {
+            color: var(--accent);
+        }
+
+        /* ===== LABEL ===== */
+
+        .screen-label {
+            font-size: 16px;
+            font-weight: 500;
+            color: var(--text-muted);
+            margin-bottom: 20px;
+        }
+
+        /* ===== PAY BUTTONS ===== */
+
+        .pay-btn {
+            position: relative;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            padding: 18px 24px;
+            width: 85%;
+            max-width: 320px;
+            margin: 6px 0;
+            border-radius: 16px;
+            font-size: 15px;
+            font-weight: 600;
+            color: var(--text);
+            cursor: pointer;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            transition: all 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            text-align: left;
+            display: flex;
+            align-items: center;
+            gap: 14px;
+            overflow: hidden;
+            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+            font-family: 'Inter', sans-serif;
+        }
+
+        .pay-btn::before {
+            content: '';
+            width: 38px;
+            height: 38px;
+            border-radius: 12px;
+            background: linear-gradient(135deg, var(--primary), var(--accent));
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+
+        .pay-btn:nth-child(2)::before { background: linear-gradient(135deg, #00C853, #00E676); }
+        .pay-btn:nth-child(3)::before { background: linear-gradient(135deg, #FF6D00, #FF9100); }
+        .pay-btn:nth-child(4)::before { background: linear-gradient(135deg, #2979FF, #00B0FF); }
+        .pay-btn:nth-child(5)::before { background: linear-gradient(135deg, #AA00FF, #D500F9); }
+
+        .pay-btn::after {
+            content: '→';
+            position: absolute;
+            right: 20px;
+            font-size: 18px;
+            color: var(--text-muted);
+            transition: all 0.3s ease;
+        }
+
+        .pay-btn:active {
+            transform: scale(0.97);
+            background: rgba(255,255,255,0.08);
+            border-color: var(--primary);
+        }
+
+        .pay-btn:active::after {
+            right: 14px;
+            color: var(--accent);
+        }
+
+        /* ===== SCREEN 3 TITLE ===== */
+
+        .payment-title {
+            font-size: 22px;
+            font-weight: 700;
+            color: var(--text);
+            margin-bottom: 24px;
+            letter-spacing: -0.5px;
+        }
+
+        /* ===== SUCCESS SCREEN ===== */
+
         .checkmark {
-            width: 80px;
-            height: 80px;
-            background-color: #4CAF50;
+            width: 90px;
+            height: 90px;
+            background: linear-gradient(135deg, var(--success), #69F0AE);
             border-radius: 50%;
             display: flex;
             align-items: center;
             justify-content: center;
-            margin-bottom: 20px;
-            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+            margin-bottom: 24px;
+            box-shadow:
+                0 8px 32px rgba(0, 230, 118, 0.3),
+                0 0 60px rgba(0, 230, 118, 0.15);
+            animation: successPop 0.6s cubic-bezier(0.16, 1, 0.3, 1) forwards,
+                       successGlow 2s ease-in-out infinite 0.6s;
+            position: relative;
         }
+
+        @keyframes successPop {
+            0% { transform: scale(0); opacity: 0; }
+            50% { transform: scale(1.15); }
+            100% { transform: scale(1); opacity: 1; }
+        }
+
+        @keyframes successGlow {
+            0%, 100% { box-shadow: 0 8px 32px rgba(0, 230, 118, 0.3), 0 0 60px rgba(0, 230, 118, 0.1); }
+            50% { box-shadow: 0 8px 40px rgba(0, 230, 118, 0.45), 0 0 80px rgba(0, 230, 118, 0.2); }
+        }
+
         .checkmark::after {
-            content: '✔';
-            font-size: 40px;
-            color: white;
+            content: '';
+            width: 20px;
+            height: 36px;
+            border: 4px solid white;
+            border-top: none;
+            border-left: none;
+            transform: rotate(45deg) translate(-2px, -2px);
+            animation: checkDraw 0.4s ease-out 0.4s both;
         }
-        
+
+        @keyframes checkDraw {
+            from {
+                clip-path: inset(0 0 100% 0);
+            }
+            to {
+                clip-path: inset(0 0 0 0);
+            }
+        }
+
+        /* Ripple rings around checkmark */
+        .checkmark::before {
+            content: '';
+            position: absolute;
+            inset: -10px;
+            border: 2px solid var(--success);
+            border-radius: 50%;
+            animation: rippleOut 1.5s ease-out 0.5s;
+            opacity: 0;
+        }
+
+        @keyframes rippleOut {
+            0% { transform: scale(0.8); opacity: 0.6; }
+            100% { transform: scale(1.6); opacity: 0; }
+        }
+
         .success-title {
-            color: black;
-            font-size: 24px;
-            font-weight: bold;
-            margin-bottom: 15px;
+            color: var(--text);
+            font-size: 26px;
+            font-weight: 800;
+            margin-bottom: 12px;
+            letter-spacing: -0.5px;
         }
-        
+
         .success-desc {
-            color: #555;
+            color: var(--text-muted);
             font-size: 14px;
-            line-height: 1.5;
+            line-height: 1.7;
             max-width: 300px;
+            text-align: center;
+        }
+
+        /* ===== CONFETTI (Success Screen) ===== */
+        .confetti-container {
+            position: fixed;
+            inset: 0;
+            pointer-events: none;
+            z-index: 10;
+            overflow: hidden;
+        }
+
+        .confetti-piece {
+            position: absolute;
+            top: -20px;
+            width: 10px;
+            height: 10px;
+            border-radius: 2px;
+            animation: confettiFall linear forwards;
+        }
+
+        @keyframes confettiFall {
+            0% {
+                opacity: 1;
+                transform: translateY(0) rotate(0deg) scale(1);
+            }
+            100% {
+                opacity: 0;
+                transform: translateY(100vh) rotate(720deg) scale(0.5);
+            }
+        }
+
+        /* ===== MISC ===== */
+        p {
+            font-size: 16px;
+            margin: 10px 0;
+        }
+
+        /* Subtle noise texture */
+        body::after {
+            content: '';
+            position: fixed;
+            inset: 0;
+            z-index: 0;
+            pointer-events: none;
+            opacity: 0.03;
+            background-image: url("data:image/svg+xml,%3Csvg viewBox='0 0 256 256' xmlns='http://www.w3.org/2000/svg'%3E%3Cfilter id='noise'%3E%3CfeTurbulence type='fractalNoise' baseFrequency='0.9' numOctaves='4' stitchTiles='stitch'/%3E%3C/filter%3E%3Crect width='100%25' height='100%25' filter='url(%23noise)'/%3E%3C/svg%3E");
+            background-repeat: repeat;
+            background-size: 128px 128px;
+        }
+
+        /* Back button area */
+        .back-btn {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            background: var(--glass);
+            border: 1px solid var(--glass-border);
+            color: var(--text-muted);
+            width: 40px;
+            height: 40px;
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            font-size: 18px;
+            transition: all 0.2s ease;
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 2;
+        }
+
+        .back-btn:active {
+            transform: scale(0.92);
+            background: rgba(255,255,255,0.1);
         }
 
     </style>
 </head>
-<body class="bg-image"> <div id="screen-1" class="screen">
+<body>
+
+    <!-- Background Effects -->
+    <div class="bg-canvas">
+        <div class="bg-orb bg-orb--1"></div>
+        <div class="bg-orb bg-orb--2"></div>
+        <div class="bg-orb bg-orb--3"></div>
+    </div>
+    <div class="bg-grid"></div>
+    <div class="particles" id="particles"></div>
+
+    <!-- Screen 1 — Hero -->
+    <div id="screen-1" class="screen screen--enter">
+        <div class="hero-badge"><span class="dot"></span> Online</div>
         <h1>Seed Buy Bot</h1>
-        <h2>Пока другие компании пытаются повторить,<br>мы - продаем качество.</h2>
-        <button class="btn-blue" onclick="goToScreen(2)">КУПИТЬ</button>
+        <h2>Пока другие компании пытаются повторить,<br>мы — продаем качество.</h2>
+        <button class="btn-blue" onclick="goToScreen(2)">
+            <span class="btn-shimmer"></span>
+            КУПИТЬ
+        </button>
     </div>
 
+    <!-- Screen 2 — Select -->
     <div id="screen-2" class="screen">
-        <p style="font-size: 18px; font-weight: 500;">Укажите количество Seed фраз:</p>
-        
-        <select id="seed-select" onchange="updatePrice()">
-            <option value="2330">5000 шт.</option>
-            <option value="3990">10000 шт.</option>
-            <option value="7480">20000 шт.</option>
-            <option value="14100">50000 шт.</option>
-        </select>
+        <p class="screen-label">Укажите количество Seed фраз:</p>
 
-        <div class="price-text" id="price-display">Сумма к оплате: 2330₽</div>
+        <div class="select-wrapper">
+            <select id="seed-select" onchange="updatePrice()">
+                <option value="2330">5000 шт.</option>
+                <option value="3990">10000 шт.</option>
+                <option value="7480">20000 шт.</option>
+                <option value="14100">50000 шт.</option>
+            </select>
+        </div>
 
-        <button class="btn-blue" onclick="goToScreen(3)">ОПЛАТИТЬ</button>
+        <div class="price-text" id="price-display">Сумма к оплате: <span class="price-amount">2330₽</span></div>
+
+        <button class="btn-blue" onclick="goToScreen(3)">
+            <span class="btn-shimmer"></span>
+            ОПЛАТИТЬ
+        </button>
     </div>
 
+    <!-- Screen 3 — Payment -->
     <div id="screen-3" class="screen">
-        <h2 style="color: black; font-weight: bold; font-size: 22px;">Выберите способ оплаты:</h2>
-        
+        <h2 class="payment-title">Выберите способ оплаты:</h2>
+
         <button class="pay-btn" onclick="goToScreen(4)">СБП (Быстрый платеж)</button>
         <button class="pay-btn" onclick="goToScreen(4)">Карта Россия</button>
         <button class="pay-btn" onclick="goToScreen(4)">Криптовалюта</button>
         <button class="pay-btn" onclick="goToScreen(4)">CryptoBot</button>
     </div>
 
+    <!-- Screen 4 — Success -->
     <div id="screen-4" class="screen">
         <div class="checkmark"></div>
         <div class="success-title">Платеж принят</div>
@@ -207,33 +704,83 @@
             Обязательно сохраните их, чтобы не потерять.
         </div>
     </div>
+
     <script src="https://telegram.org/js/telegram-web-app.js?61"></script>
     <script>
         let tg = window.Telegram.WebApp;
         tg.headerColor = "#2444E6";
-        tg.expand(); // Раскрываем на весь экран
+        tg.expand();
 
-        // Функция переключения экранов
+        // --- PARTICLES ---
+        (function createParticles() {
+            const container = document.getElementById('particles');
+            const count = 25;
+            for (let i = 0; i < count; i++) {
+                const p = document.createElement('div');
+                p.classList.add('particle');
+                p.style.left = Math.random() * 100 + '%';
+                p.style.animationDuration = (6 + Math.random() * 10) + 's';
+                p.style.animationDelay = (Math.random() * 10) + 's';
+                p.style.width = (2 + Math.random() * 3) + 'px';
+                p.style.height = p.style.width;
+                const colors = ['#6C5CE7', '#00CEFF', '#A29BFE', '#FF6B6B', '#00E676'];
+                p.style.background = colors[Math.floor(Math.random() * colors.length)];
+                container.appendChild(p);
+            }
+        })();
+
+        // --- CONFETTI (on success) ---
+        function spawnConfetti() {
+            const container = document.createElement('div');
+            container.classList.add('confetti-container');
+            document.body.appendChild(container);
+            const colors = ['#6C5CE7', '#00CEFF', '#FF6B6B', '#FFD93D', '#00E676', '#A29BFE', '#FF9100'];
+            for (let i = 0; i < 60; i++) {
+                const piece = document.createElement('div');
+                piece.classList.add('confetti-piece');
+                piece.style.left = Math.random() * 100 + '%';
+                piece.style.background = colors[Math.floor(Math.random() * colors.length)];
+                piece.style.animationDuration = (1.5 + Math.random() * 2.5) + 's';
+                piece.style.animationDelay = (Math.random() * 0.8) + 's';
+                piece.style.width = (6 + Math.random() * 8) + 'px';
+                piece.style.height = (4 + Math.random() * 6) + 'px';
+                piece.style.borderRadius = Math.random() > 0.5 ? '50%' : '2px';
+                container.appendChild(piece);
+            }
+            setTimeout(() => container.remove(), 5000);
+        }
+
+        // --- SCREEN NAVIGATION (функционал не тронут) ---
         function goToScreen(screenNumber) {
-            // Скрываем все экраны
-            document.querySelectorAll('.screen').forEach(el => el.style.display = 'none');
-            
-            // Показываем нужный
-            document.getElementById('screen-' + screenNumber).style.display = 'flex';
+            document.querySelectorAll('.screen').forEach(el => {
+                el.style.display = 'none';
+                el.classList.remove('screen--enter');
+            });
 
-            // Если переходим на 3 или 4 экран - меняем фон body на белый
+            const target = document.getElementById('screen-' + screenNumber);
+            target.style.display = 'flex';
+
+            // Trigger reflow for animation restart
+            void target.offsetWidth;
+            target.classList.add('screen--enter');
+
             if (screenNumber >= 3) {
                 document.body.className = 'bg-white';
             } else {
                 document.body.className = 'bg-image';
             }
+
+            // Confetti on success screen
+            if (screenNumber === 4) {
+                spawnConfetti();
+            }
         }
 
-        // Функция обновления цены
+        // --- PRICE UPDATE (функционал не тронут) ---
         function updatePrice() {
             let select = document.getElementById('seed-select');
-            let price = select.value; // Берем цену из value опции
-            document.getElementById('price-display').innerText = 'Сумма к оплате: ' + price + '₽';
+            let price = select.value;
+            document.getElementById('price-display').innerHTML = 'Сумма к оплате: <span class="price-amount">' + price + '₽</span>';
         }
     </script>
 </body>
