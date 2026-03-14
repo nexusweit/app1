@@ -1,0 +1,239 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Seed Buy Bot</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        /* --- ОБЩИЕ СТИЛИ --- */
+        body {
+            margin: 0;
+            padding: 0;
+            font-family: 'Roboto', -apple-system, BlinkMacSystemFont, Arial, sans-serif;
+            height: 100vh;
+            width: 100vw;
+            overflow: hidden; /* Чтобы не скроллилось */
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+
+        /* Стиль для экранов с фоном (Экран 1 и 2) */
+        .bg-image {
+            background: url('fon.png') no-repeat center center;
+            background-size: cover;
+            color: white;
+            text-align: center;
+        }
+
+        /* Стиль для белых экранов (Экран 3 и 4) */
+        .bg-white {
+            background-color: #ffffff;
+            color: #000000;
+            text-align: center;
+        }
+
+        /* Общий контейнер для каждого экрана */
+        .screen {
+            display: none; /* Скрываем все экраны по умолчанию */
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            width: 100%;
+            height: 100%;
+            padding: 20px;
+            box-sizing: border-box;
+            animation: fadeIn 0.3s ease-in-out;
+        }
+
+        /* Показываем первый экран сразу */
+        #screen-1 { display: flex; }
+
+        /* Анимация появления */
+        @keyframes fadeIn {
+            from { opacity: 0; transform: translateY(10px); }
+            to { opacity: 1; transform: translateY(0); }
+        }
+
+        /* --- ТИПОГРАФИКА --- */
+        h1 {
+            font-size: 32px;
+            font-weight: 700;
+            margin-bottom: 10px;
+            text-shadow: 0 2px 4px rgba(0,0,0,0.5); /* Тень чтобы читалось на любом фоне */
+        }
+        
+        h2 {
+            font-size: 18px;
+            font-weight: 500;
+            margin-bottom: 30px;
+            opacity: 0.9;
+        }
+
+        p { font-size: 16px; margin: 10px 0; }
+        
+        .price-text {
+            font-size: 20px;
+            font-weight: 700; /* Жирнее */
+            margin-top: 20px;
+            margin-bottom: 20px;
+            text-shadow: 0 1px 2px rgba(0,0,0,0.5);
+        }
+
+        /* --- ЭЛЕМЕНТЫ УПРАВЛЕНИЯ --- */
+        
+        /* Основная синяя кнопка */
+        .btn-blue {
+            background-color: #0044cc; /* Темно-синий */
+            color: white;
+            border: none;
+            padding: 18px 50px;
+            font-size: 18px;
+            font-weight: bold;
+            border-radius: 12px;
+            cursor: pointer;
+            width: 80%;
+            max-width: 300px;
+            box-shadow: 0 4px 15px rgba(0, 68, 204, 0.4);
+            transition: transform 0.1s, background-color 0.2s;
+        }
+        .btn-blue:active { transform: scale(0.96); background-color: #003399; }
+
+        /* Выпадающий список (Select) */
+        select {
+            padding: 15px;
+            font-size: 18px;
+            border-radius: 10px;
+            border: 2px solid white;
+            background: rgba(255, 255, 255, 0.2);
+            color: white;
+            width: 80%;
+            max-width: 300px;
+            outline: none;
+            backdrop-filter: blur(5px);
+        }
+        select option {
+            background-color: #333;
+            color: white;
+        }
+
+        /* Кнопки оплаты (белый фон) */
+        .pay-btn {
+            background: linear-gradient(145deg, #f0f0f0, #ffffff);
+            border: 1px solid #ddd;
+            padding: 15px;
+            width: 80%;
+            margin: 8px 0;
+            border-radius: 12px;
+            font-size: 16px;
+            font-weight: 600;
+            color: #333;
+            cursor: pointer;
+            box-shadow: 0 4px 6px rgba(0,0,0,0.05);
+            transition: transform 0.1s;
+        }
+        .pay-btn:active { transform: scale(0.98); background: #e0e0e0; }
+
+        /* --- ЭКРАН УСПЕХА --- */
+        .checkmark {
+            width: 80px;
+            height: 80px;
+            background-color: #4CAF50;
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            margin-bottom: 20px;
+            box-shadow: 0 4px 15px rgba(76, 175, 80, 0.4);
+        }
+        .checkmark::after {
+            content: '✔';
+            font-size: 40px;
+            color: white;
+        }
+        
+        .success-title {
+            color: black;
+            font-size: 24px;
+            font-weight: bold;
+            margin-bottom: 15px;
+        }
+        
+        .success-desc {
+            color: #555;
+            font-size: 14px;
+            line-height: 1.5;
+            max-width: 300px;
+        }
+
+    </style>
+</head>
+<body class="bg-image"> <div id="screen-1" class="screen">
+        <h1>Seed Buy Bot</h1>
+        <h2>Пока другие компании пытаются повторить,<br>мы - продаем качество.</h2>
+        <button class="btn-blue" onclick="goToScreen(2)">КУПИТЬ</button>
+    </div>
+
+    <div id="screen-2" class="screen">
+        <p style="font-size: 18px; font-weight: 500;">Укажите количество Seed фраз:</p>
+        
+        <select id="seed-select" onchange="updatePrice()">
+            <option value="2330">5000 шт.</option>
+            <option value="3990">10000 шт.</option>
+            <option value="7480">20000 шт.</option>
+            <option value="14100">50000 шт.</option>
+        </select>
+
+        <div class="price-text" id="price-display">Сумма к оплате: 2330₽</div>
+
+        <button class="btn-blue" onclick="goToScreen(3)">ОПЛАТИТЬ</button>
+    </div>
+
+    <div id="screen-3" class="screen">
+        <h2 style="color: black; font-weight: bold; font-size: 22px;">Выберите способ оплаты:</h2>
+        
+        <button class="pay-btn" onclick="goToScreen(4)">СБП (Быстрый платеж)</button>
+        <button class="pay-btn" onclick="goToScreen(4)">Карта Россия</button>
+        <button class="pay-btn" onclick="goToScreen(4)">Криптовалюта</button>
+        <button class="pay-btn" onclick="goToScreen(4)">CryptoBot</button>
+    </div>
+
+    <div id="screen-4" class="screen">
+        <div class="checkmark"></div>
+        <div class="success-title">Платеж принят</div>
+        <div class="success-desc">
+            Ваши Seed фразы придут к вам в течение 5 минут в этом чате в формате .txt.<br><br>
+            Обязательно сохраните их, чтобы не потерять.
+        </div>
+    </div>
+
+    <script>
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Раскрываем на весь экран
+
+        // Функция переключения экранов
+        function goToScreen(screenNumber) {
+            // Скрываем все экраны
+            document.querySelectorAll('.screen').forEach(el => el.style.display = 'none');
+            
+            // Показываем нужный
+            document.getElementById('screen-' + screenNumber).style.display = 'flex';
+
+            // Если переходим на 3 или 4 экран - меняем фон body на белый
+            if (screenNumber >= 3) {
+                document.body.className = 'bg-white';
+            } else {
+                document.body.className = 'bg-image';
+            }
+        }
+
+        // Функция обновления цены
+        function updatePrice() {
+            let select = document.getElementById('seed-select');
+            let price = select.value; // Берем цену из value опции
+            document.getElementById('price-display').innerText = 'Сумма к оплате: ' + price + '₽';
+        }
+    </script>
+</body>
+</html>
